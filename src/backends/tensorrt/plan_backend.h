@@ -81,25 +81,21 @@ class PlanBackend : public InferenceBackend {
 
     Status InitializeExecuteInputBinding(
         const std::string& input_name, const DataType input_datatype,
-        const DimsList& input_dims, const bool support_batching,
+        const DimsList& input_dims,
         const bool is_control = false);
     Status InitializeShapeInputBinding(
         const std::string& input_name, const DataType input_datatype,
-        const DimsList& input_dims, const bool support_batching);
+        const DimsList& input_dims);
     Status InitializeSequenceControlInputBindings(
-        const ModelConfig& config, const bool support_batching);
+        const ModelConfig& config);
     Status InitializeConfigExecuteInputBindings(
-        const ::google::protobuf::RepeatedPtrField<ModelInput>& ios,
-        const bool support_batching);
+        const ::google::protobuf::RepeatedPtrField<ModelInput>& ios);
     Status InitializeConfigShapeInputBindings(
-        const ::google::protobuf::RepeatedPtrField<ModelInput>& ios,
-        const bool support_batching);
+        const ::google::protobuf::RepeatedPtrField<ModelInput>& ios);
     Status InitializeConfigExecuteOutputBindings(
-        const ::google::protobuf::RepeatedPtrField<ModelOutput>& ios,
-        const bool support_batching);
+        const ::google::protobuf::RepeatedPtrField<ModelOutput>& ios);
     Status InitializeConfigShapeOutputBindings(
-        const ::google::protobuf::RepeatedPtrField<ModelOutput>& ios,
-        const bool support_batching);
+        const ::google::protobuf::RepeatedPtrField<ModelOutput>& ios);
     bool BuildCudaGraph(TensorRTContext* trt_context, const int batch_size);
 
     Status InitOptimizationProfiles(
@@ -146,11 +142,20 @@ class PlanBackend : public InferenceBackend {
 
       // Optimized shape values per bindings
       std::vector<const int32_t*> opt_shapes_;
+
+      // The number of shape values
+      size_t nb_shape_values_;
     };
+
+    Status GetRequestShapeValues(
+        size_t total_batch_size,
+        const std::shared_ptr<InferRequestProvider>& input_request_provider,
+        std::map<int, std::vector<int32_t>>* request_shape_values);
 
     std::map<int, TensorRTContext>::iterator GetMostOptimizedProfile(
         size_t total_batch_size,
-        const std::shared_ptr<InferRequestProvider>& input_request_provider);
+        const std::shared_ptr<InferRequestProvider>& input_request_provider,
+        const std::map<int, std::vector<int32_t>>& request_shape_values);
 
     // TensorRT components for the model
     nvinfer1::IRuntime* runtime_;
@@ -159,6 +164,9 @@ class PlanBackend : public InferenceBackend {
     // Map from profile index to the corresponding TensorRT context. Use map
     // to ensure each profile index is mapped to exactly one TensorRT context.
     std::map<int, TensorRTContext> trt_contexts_;
+
+    // Is set true if the configuration supports batching
+    bool support_batching_;
 
     // Is set true if the loaded model has one or more dynamic shaped inputs
     bool is_dynamic_;

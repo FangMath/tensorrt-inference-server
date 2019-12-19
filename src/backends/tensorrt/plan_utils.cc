@@ -347,6 +347,37 @@ ValidateControlDimsDynamic(
   return Status::Success;
 }
 
+Status
+ValidateShapeValues(
+    const std::vector<int32_t>& request_shape_values,
+    const int32_t* min_shape_values, const int32_t* max_shape_values,
+    size_t nb_shape_values, const bool support_batching)
+{
+  const int nonbatch_start_idx = (support_batching ? 1 : 0);
+  if (request_shape_values.size() != nb_shape_values) {
+    return Status(
+        RequestStatusCode::INVALID_ARG,
+        "mismatch between the number of shape values. Expecting " +
+            std::to_string(nb_shape_values) + ". Got " +
+            std::to_string(request_shape_values.size()));
+  }
+  for (size_t i = 0; i < nb_shape_values; i++) {
+    if (request_shape_values[i] <
+            *(min_shape_values + i + nonbatch_start_idx) ||
+        request_shape_values[i] >
+            *(max_shape_values + i + nonbatch_start_idx)) {
+      return Status(
+          RequestStatusCode::INVALID_ARG,
+          "The shape of value at index " + std::to_string(i) +
+              " is expected to be in range from " +
+              std::to_string(*(min_shape_values + i + nonbatch_start_idx)) +
+              " to " +
+              std::to_string(*(max_shape_values + i + nonbatch_start_idx)) +
+              ", Got: " + std::to_string(request_shape_values[i]));
+    }
+  }
+  return Status::Success;
+}
 
 void
 DimsToDimVec(const nvinfer1::Dims& model_dims, std::vector<int64_t>* dims)
